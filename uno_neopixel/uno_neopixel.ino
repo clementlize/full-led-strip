@@ -23,131 +23,154 @@
    * Based on Bootstrap colors
    * See the public method setColor() for implementation information
    */
-  typedef enum {
-    RED, GREEN, BLUE
-    } mainColor;
+  typedef byte mainColor;
+  #define MC_RED    1;
+  #define MC_GREEN  2;
+  #define MC_BLUE   3;
 
-  /** Color offset
-   * Defines the offset of the color (more or less red for example)
-   * Constraints: -5 <= value <= 5
-   */
-  typedef int colorOffset;
+  byte ledBrightness;
 
-  /** LED Brightness
-   * Constraints: 1 <= value <= 5
-   */
-  typedef int ledBrightness;
-
-  /** Interface for the Led class
+  /** Represents a LED
    */
   class Led {
 
-    public:
-
-      // Constructor
-      Led (int id);  
-
-      // Methods
-      askDisplay ();
-      setColor (mainColor color, colorOffset offset);
-      setBrightness (ledBrightness brightness);
-      setState (bool state);
-
     private:
 
-      int _red;  // Red intensity
-      int _green;  // Green intensity
-      int _blue;  // Blue intensity
-
       int _id;  // LED id
-      bool _state;  // LED state: on (true) or off (false)
       mainColor _color;  // LED color
-      colorOffset _colorOffset;  // LED color offset
-      ledBrightness _brightness;  // LED brightness
-  };
 
-  /** Constructor
-   * Initialising a Led with its id
-   */
-  Led::Led (int id) {
+    public:
 
-    _id = id;
-    _color = RED;  // Default color
-    _colorOffset = 0; // No offset
-    _brightness = 3;  // Default brightness
-    _state = true;  // The Led is turned on
-  };
+      /** CONSTRUCTOR
+       * Initialising a Led.
+       * WARNING: use setId() after creating the object!
+       */
+      Led () {
 
-  /** Sends an order to display a LED with its current parameters.
-   * WARNING: this is a synchronous operation: the order is cached and will be executed
-   * when the function pixels.show() is called (at the end of void loop())
-   */
-  Led::askDisplay () {
-
-    Serial.println("Asking to display led " + _id);
-
-    int red, green, blue;
-
-    // Checking if the LED is turned on
-    if (_state) {
-
-      // Setting basic color with its offset
-      switch (_color) {
-
-        case RED:
-          red = 255;
-          green = 0;
-          blue = 0;
-          break;
+        _id = 0;  // WARNING: use setId() after creating the object!
+        _color = MC_RED;  // Default color
       };
 
-      // Applying brightness
-      red = 120;
-      green = green;
-      blue = blue;
+      /** Setting a LED id
+       * @param id the LED id
+       */
+      void setId (int id) {
 
-    }
-    // LED is turned off
-    else {
+        _id = id;
+      };
 
-      red = 0;
-      green = 0;
-      blue = 0;
-    }
+      /** Sets a color to the LED.
+       * @param color   The color to set. See the declaration of mainColor for info
+       */
+      void setColor (mainColor color) {
 
-    // Applying the color
-    pixels.setPixelColor (_id, pixels.Color(red, green, blue));
+        _color = color;
+      };
+
+      /** Sends an order to display a LED with its current parameters.
+       * WARNING: this is a synchronous operation: the order is cached and will be executed
+       * when the function pixels.show() is called (at the end of void loop())
+       */
+      void askDisplay (byte brightness) {
+
+        uint32_t hsv;
+        byte hsvBrightness;
+
+        switch (brightness)
+        {
+        case 0:
+          hsvBrightness = 0;
+          break;
+
+        case 1:
+          hsvBrightness = 30;
+          break;
+
+        case 2:
+          hsvBrightness = 60;
+          break;
+
+        case 4:
+          hsvBrightness = 150;
+          break;
+
+        case 5:
+          hsvBrightness = 250;
+          break;
+        
+        case 3:
+        default:
+          hsvBrightness = 100;
+          break;
+        }
+
+        // Setting basic color with its offset
+        switch (_color) {
+
+          case 1:
+            hsv = pixels.ColorHSV(0, 255, hsvBrightness);
+            break;
+
+          case 2:
+            hsv = pixels.ColorHSV(21845, 255, hsvBrightness);
+            break;
+
+          case 3:   
+          default:
+            hsv = pixels.ColorHSV(43690, 255, hsvBrightness);
+            break;
+        };
+
+        // Applying the color
+        pixels.setPixelColor(_id, pixels.gamma32(hsv));
+      };
   };
 
 // ------ END: CLASS LED ------
 
 // Array of LEDs
-Led* leds = (Led*) malloc(sizeof(Led) * NUMPIXELS);
+Led leds[NUMPIXELS];
 
 void setup() {
 
-  Serial.begin(9600);
+  //Serial.begin(9600);
   pixels.begin(); // This initializes the NeoPixel library.
+  ledBrightness = 1;
 
   // Creating the led objects with their ids
-  for (int i=0; i<NUMPIXELS; i++) {
-
-    leds[i] = Led (i);
-  }
+  for (int i=0; i<NUMPIXELS; i++) { leds[i].setId(i); }
 }
 
 void loop() {
 
-  //pixels.setPixelColor(73, pixels.Color(120, 120, 120));
-
-  //led_1.askDisplay();
-
-  // Asking to display each LED of the strip
+  byte cpt_color = 0;
   for (int i=0; i<NUMPIXELS; i++) {
 
-    leds[i].askDisplay();
+    switch (cpt_color)
+    {
+    case 0:
+      leds[i].setColor(1);
+      cpt_color++;
+      break;
+
+    case 1:
+      leds[i].setColor(2);
+      cpt_color++;
+      break;
+
+    case 2:
+    default:
+      leds[i].setColor(3);
+      cpt_color = 0;
+      break;
+    }
   }
+
+  // Asking to display each LED of the strip
+  for (int i=0; i<NUMPIXELS; i++) { leds[i].askDisplay(ledBrightness); }
 
   //THIS CALL MUST BE LOCATED AT THE END OF THE LOOP FUNCTION
   pixels.show();
+
+  delay(500);
 }
