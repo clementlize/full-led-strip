@@ -6,171 +6,267 @@
  * v0.1 - Nov 2020
  */
 
+
 // ------ NEOPIXEL ------
 
-  #define LED_PIN        2    // PIN where the Neopixel is plugged in
-  #define NUMPIXELS      300  // Number of LEDs available on the LED Strip
+  #define LED_PIN   2
+  #define NUMPIXELS 300
 
-  // Adafruit Neopixel Library
   #include <Adafruit_NeoPixel.h>
   Adafruit_NeoPixel pixels = Adafruit_NeoPixel(NUMPIXELS, LED_PIN, NEO_GRB + NEO_KHZ800);
 
 // ------ END: NEOPIXEL ------
 
-// ------ CLASS LED ------
 
-  /** All the colors available for this project
-   * Based on Bootstrap colors
-   * See the public method setColor() for implementation information
+// ------ SENSORS ------
+
+  #define KNOB_PIN 0
+  #define BTN_PIN 8
+
+// ------ END: SENSORS ------
+
+
+// ------ CONSTANTS ------
+
+  #define D_1   0
+  #define D_2b  73
+  #define D_2h  74
+  #define D_3b  111
+  #define D_3h  112
+  #define D_4   118
+  #define HD    119
+  #define HM_d  150
+  #define HM_g  151
+  #define HG    182
+  #define G_4   183
+  #define G_3h  190
+  #define G_3b  191
+  #define G_2h  227
+  #define G_2b  228
+  #define G_1   299
+
+// ------ END: CONSTANTS ------
+
+// ------ TYPES ------
+
+  typedef byte ledBrightness;  // Brightness value. Can be 1, 2, 3 or 4
+  typedef byte colorOffset;  // Offset value. Must be between -3 and 3.
+
+  // The colors available for the LED strip.
+  typedef enum {
+    RED, GREEN, BLUE
+  } mainColor;
+
+  // The directions available for the movments
+  typedef enum {
+    FULL_NORM, FULL_REV, HALF_DOWN, HALF_UP
+  } direction;
+
+// ------ END: TYPES ------
+
+
+// ------ GLOBAL VARIABLES ------
+
+  bool isOn = true;  // LED strip global on-off variable
+  ledBrightness stripBrightness = 2;  // The main brightness of the strip
+  direction stripDirection = FULL_NORM;  // The direction for the movments
+
+// ------ END: GLOBAL VARIABLES ------
+
+
+// ------ COLOR CONTROL FUNTIONS ------
+
+  void knobChangeBrightness (int value) {
+
+    if (value >= 0 && value < 138) { stripBrightness = 1; }
+    else if (value >= 138 && value < 276) { stripBrightness = 2; }
+    else if (value >= 276 && value < 414) { stripBrightness = 3; }
+    else if (value >= 414 && value < 552) { stripBrightness = 4; }
+    else { stripBrightness = 5; }
+  }
+
+  /** Returns the value to put in the setHsvColor function, depending on the global brightness value.
+   * @param brightness the 
+   * @returns the brightness value (0-255)
    */
-  typedef byte mainColor;
-  #define MC_RED    1;
-  #define MC_GREEN  2;
-  #define MC_BLUE   3;
+  byte getHsvBrightness (ledBrightness brightness) {
 
-  byte ledBrightness;
+    switch (brightness) {
 
-  /** Represents a LED
+      case 1:
+        return 30;
+        break;
+
+      case 2:
+        return 60;
+        break;
+
+      case 4:
+        return 150;
+        break;
+
+      case 3:
+      default:
+        return 100;
+        break;
+    }
+  }
+
+  /** Sets the color of a LED
+   * @param id the id of the LED
+   * @param color the color to set (see type mainColor for info)
+   * @param offset the color offset (see type colorOffset for info)
    */
-  class Led {
+  void setLed (int id, mainColor color, colorOffset offset) {
 
-    private:
+    uint32_t hsv;
 
-      int _id;  // LED id
-      mainColor _color;  // LED color
+    if (isOn) {
 
-    public:
+      // Setting basic color with its offset
+      switch (color) {
 
-      /** CONSTRUCTOR
-       * Initialising a Led.
-       * WARNING: use setId() after creating the object!
-       */
-      Led () {
-
-        _id = 0;  // WARNING: use setId() after creating the object!
-        _color = MC_RED;  // Default color
-      };
-
-      /** Setting a LED id
-       * @param id the LED id
-       */
-      void setId (int id) {
-
-        _id = id;
-      };
-
-      /** Sets a color to the LED.
-       * @param color   The color to set. See the declaration of mainColor for info
-       */
-      void setColor (mainColor color) {
-
-        _color = color;
-      };
-
-      /** Sends an order to display a LED with its current parameters.
-       * WARNING: this is a synchronous operation: the order is cached and will be executed
-       * when the function pixels.show() is called (at the end of void loop())
-       */
-      void askDisplay (byte brightness) {
-
-        uint32_t hsv;
-        byte hsvBrightness;
-
-        switch (brightness)
-        {
-        case 0:
-          hsvBrightness = 0;
+        case RED:
+          hsv = pixels.ColorHSV(0, 255, getHsvBrightness(stripBrightness));
           break;
 
-        case 1:
-          hsvBrightness = 30;
+        case GREEN:
+          hsv = pixels.ColorHSV(21845, 255, getHsvBrightness(stripBrightness));
           break;
 
-        case 2:
-          hsvBrightness = 60;
-          break;
-
-        case 4:
-          hsvBrightness = 150;
-          break;
-
-        case 5:
-          hsvBrightness = 250;
-          break;
-        
-        case 3:
+        case BLUE:   
         default:
-          hsvBrightness = 100;
+          hsv = pixels.ColorHSV(43690, 255, getHsvBrightness(stripBrightness));
           break;
-        }
+      }
 
-        // Setting basic color with its offset
-        switch (_color) {
+      // Applying the color
+      pixels.setPixelColor(id, pixels.gamma32(hsv));
 
-          case 1:
-            hsv = pixels.ColorHSV(0, 255, hsvBrightness);
-            break;
+    }
+    else {
 
-          case 2:
-            hsv = pixels.ColorHSV(21845, 255, hsvBrightness);
-            break;
-
-          case 3:   
-          default:
-            hsv = pixels.ColorHSV(43690, 255, hsvBrightness);
-            break;
-        };
-
-        // Applying the color
-        pixels.setPixelColor(_id, pixels.gamma32(hsv));
-      };
+      pixels.setPixelColor(id, pixels.Color(0,0,0));
+    }
   };
 
-// ------ END: CLASS LED ------
+// ------ END: COLOR CONTROL FUNTIONS ------
 
-// Array of LEDs
-Led leds[NUMPIXELS];
+
+// ------ STRIP FUNTIONS ------
+
+  int directionCounterRange = 20000;
+  int directionCounter = 0;
+  int randomDirectionRange = 300;
+  int randomDirection = (rand() % randomDirectionRange) - randomDirectionRange/2;
+  void changeDirection () {
+
+    if (directionCounter == directionCounterRange/4 + randomDirection) {
+
+      stripDirection = HALF_DOWN;
+    }
+    else if (directionCounter == directionCounterRange/2 + randomDirection) {
+
+      stripDirection = FULL_REV;
+    }
+    else if (directionCounter == 3*directionCounterRange/4 + randomDirection) {
+
+      stripDirection = HALF_UP;
+    }
+    else if (directionCounter == directionCounterRange + randomDirection) {
+    
+      stripDirection = HALF_DOWN;
+      directionCounter = 0;
+    }
+
+    directionCounter++;
+  }
+
+  int mvt_5_deplacement [5] = {0, NUMPIXELS*1/5, NUMPIXELS*2/5, NUMPIXELS*3/5, NUMPIXELS*4/5};
+  /*int mvt_5_half_deplacement [2][5] = {
+    {0, NUMPIXELS*1/5, NUMPIXELS*2/5, NUMPIXELS*3/5, NUMPIXELS*4/5},
+    {0, NUMPIXELS*1/5, NUMPIXELS*2/5, NUMPIXELS*3/5, NUMPIXELS*4/5}
+    };*/
+  void mvt_5 (mainColor color1, mainColor color2, direction dir) {
+
+    byte dash_radius = 3;
+
+    bool isColored;  // Decides if the LED will get color 2
+    int i; // Main for loop counter
+    bool isNorm = (dir == FULL_NORM ||dir == HALF_UP);  // For the direction
+    bool isHalf = (dir == HALF_UP || dir == HALF_DOWN);  //
+    int led_begin, led_end;  // begin and end of the part of the strip we're looking at
+
+    for (
+      (isNorm) ? i=0 : i=NUMPIXELS-1;
+      (isNorm) ? i<NUMPIXELS : i>=0;
+      (isNorm) ? i++ : i--)
+      {
+
+      isColored = false;
+      for (int j=0; j<5; j++) {
+
+        // Global checking
+        if (
+          (i >= (mvt_5_deplacement[j]-dash_radius) && i <= (mvt_5_deplacement[j]+dash_radius)) // "normal" case
+          || (i < dash_radius && mvt_5_deplacement[j] >= NUMPIXELS - dash_radius + i) // start of strip case
+          || (i >= NUMPIXELS - dash_radius && mvt_5_deplacement[j] < dash_radius - (NUMPIXELS-i))  // end of strip case
+          ) {
+
+          isColored = true;
+        }
+      }
+
+      if (isColored) {
+        setLed(i, color2, 0);
+      }
+      else {
+        setLed(i, color1, 0);
+      }
+    }
+
+    //Serial.println(deplacement[0]);
+
+    for (int i=0; i<5; i++) {
+
+      if ((isNorm && mvt_5_deplacement[i] != NUMPIXELS-1) || (!isNorm && mvt_5_deplacement[i] != 0)) {
+        (isNorm) ? mvt_5_deplacement[i]++ : mvt_5_deplacement[i]--;
+      }
+      else {
+        (isNorm) ? mvt_5_deplacement[i] = 0 : mvt_5_deplacement[i] = NUMPIXELS-1;
+      }
+    }
+
+  //Serial.println(deplacement[0]);
+  }
+
+// ------ END: STRIP FUNTIONS ------
 
 void setup() {
 
   //Serial.begin(9600);
   pixels.begin(); // This initializes the NeoPixel library.
-  ledBrightness = 1;
+  //pinMode(BTN_PIN, INPUT);
 
-  // Creating the led objects with their ids
-  for (int i=0; i<NUMPIXELS; i++) { leds[i].setId(i); }
 }
 
 void loop() {
 
-  byte cpt_color = 0;
-  for (int i=0; i<NUMPIXELS; i++) {
+  /*int pot_value = analogRead(KNOB_PIN);
+  knobChangeBrightness(pot_value);
 
-    switch (cpt_color)
-    {
-    case 0:
-      leds[i].setColor(1);
-      cpt_color++;
-      break;
+  Serial.println(stripBrightness);*/
 
-    case 1:
-      leds[i].setColor(2);
-      cpt_color++;
-      break;
-
-    case 2:
-    default:
-      leds[i].setColor(3);
-      cpt_color = 0;
-      break;
-    }
+  /*if (digitalRead(BTN_PIN) == HIGH) {
+    Serial.println("Btn on");
   }
+  else {
+    Serial.println("Btn off");
+  }*/
 
-  // Asking to display each LED of the strip
-  for (int i=0; i<NUMPIXELS; i++) { leds[i].askDisplay(ledBrightness); }
+  changeDirection ();
+  mvt_5 (RED, BLUE, stripDirection);
 
-  //THIS CALL MUST BE LOCATED AT THE END OF THE LOOP FUNCTION
   pixels.show();
-
-  delay(500);
+  delay(50);
 }

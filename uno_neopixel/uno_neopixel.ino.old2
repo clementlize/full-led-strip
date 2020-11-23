@@ -1,0 +1,192 @@
+/** --- FULL LED STRIP ---
+ * This program generates nice patterns, animations and controls for your Neopixel LED Strip
+ * Created by Clément Lizé
+ * See: https://clementlize.com
+ * Github repository: https://github.com/clementlize/full-led-strip
+ * v0.1 - Nov 2020
+ */
+
+#include <stdlib.h>
+
+// ------ NEOPIXEL ------
+
+  #define LED_PIN        2    // PIN where the Neopixel is plugged in
+  #define NUMPIXELS      300  // Number of LEDs available on the LED Strip
+
+  // Adafruit Neopixel Library
+  #include <Adafruit_NeoPixel.h>
+  Adafruit_NeoPixel pixels = Adafruit_NeoPixel(NUMPIXELS, LED_PIN, NEO_GRB + NEO_KHZ800);
+
+// ------ END: NEOPIXEL ------
+
+#define POT_PIN 0
+
+// ------ LED ------
+
+  /** All the colors available for this project
+   * Based on Bootstrap colors
+   * See the public method setColor() for implementation information
+   */
+  typedef byte mainColor;
+  #define MC_RED    1;
+  #define MC_GREEN  2;
+  #define MC_BLUE   3;
+
+  // Global variable: strip brightness
+  byte ledBrightness;  
+
+  // Type Led
+  typedef struct {
+
+    int id;
+    mainColor color;
+
+  } t_led;
+
+  typedef t_led* ptr_led;
+
+  typedef struct {
+
+    ptr_led* leds;
+    int nb;
+
+  } t_ledstrip;
+
+  t_ledstrip ledStrip;
+  
+  /** Sends an order to display a LED with its current parameters.
+   * WARNING: this is a synchronous operation: the order is cached and will be executed
+   * when the function pixels.show() is called (at the end of void loop())
+   */
+  void askDisplay (int id, mainColor color, byte brightness) {
+
+    uint32_t hsv;
+    byte hsvBrightness;
+
+    Serial.println(brightness);
+
+    switch (brightness)
+    {
+    case 0:
+      hsvBrightness = 0;
+      break;
+
+    case 1:
+      hsvBrightness = 30;
+      break;
+
+    case 2:
+      hsvBrightness = 60;
+      break;
+
+    case 4:
+      hsvBrightness = 150;
+      break;
+
+    case 5:
+      hsvBrightness = 250;
+      break;
+    
+    case 3:
+    default:
+      hsvBrightness = 100;
+      break;
+    }
+
+    Serial.println(hsvBrightness);
+
+    // Setting basic color with its offset
+    switch (color) {
+
+      case 1:
+        hsv = pixels.ColorHSV(0, 255, hsvBrightness);
+        break;
+
+      case 2:
+        hsv = pixels.ColorHSV(21845, 255, hsvBrightness);
+        break;
+
+      case 3:   
+      default:
+        hsv = pixels.ColorHSV(43690, 255, hsvBrightness);
+        break;
+    };
+
+    // Applying the color
+    pixels.setPixelColor(id, pixels.gamma32(hsv));
+  };
+
+// ------ END: CLASS LED ------
+
+void changeBrightness (int value) {
+
+  if (value >= 0 && value < 138) { ledBrightness = 1; }
+  else if (value >= 138 && value < 276) { ledBrightness = 2; }
+  else if (value >= 276 && value < 414) { ledBrightness = 3; }
+  else if (value >= 414 && value < 552) { ledBrightness = 4; }
+  else { ledBrightness = 5; }
+}
+
+// Array of LEDs
+
+void setup() {
+
+  Serial.begin(9600);
+  pixels.begin(); // This initializes the NeoPixel library.
+  ledBrightness = 2;
+
+  ledStrip.nb = NUMPIXELS;
+  ledStrip.leds = (ptr_led*) malloc(ledStrip.nb * sizeof(t_led*));
+  *ledStrip.leds[120] = {120, 2};
+
+  // Creating the led objects with their ids
+  //for (int i=0; i<200; i++) { leds[i].setId(i); }
+}
+
+void loop() {
+
+  /*byte cpt_color = 0;
+  for (int i=0; i<200; i++) {
+
+    switch (cpt_color)
+    {
+    case 0:
+      leds[i].setColor(1);
+      cpt_color++;
+      break;
+
+    case 5:
+      leds[i].setColor(2);
+      cpt_color++;
+      break;
+
+    case 10:
+      leds[i].setColor(3);
+      cpt_color++;
+      break;
+
+    case 15:
+      cpt_color = 0;
+      break;
+
+    default:
+      cpt_color++;
+    }
+  }*/
+
+  /*int pot_value = analogRead(POT_PIN);
+  changeBrightness(pot_value);*/
+
+  // Asking to display each LED of the strip
+  //for (int i=0; i<200; i++) { leds[i].askDisplay(ledBrightness); }
+
+  Serial.println(ledStrip.leds[120]->id);
+  //Serial.print("   ");
+  //Serial.println(ledStrip.leds[120]->color);
+  askDisplay(ledStrip.leds[120]->id, ledStrip.leds[120]->color, 3);
+
+  //THIS CALL MUST BE LOCATED AT THE END OF THE LOOP FUNCTION
+  pixels.show();
+
+  delay(500);
+}
