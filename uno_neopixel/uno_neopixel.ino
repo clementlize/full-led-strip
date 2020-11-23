@@ -69,7 +69,7 @@
 
   bool isOn = true;  // LED strip global on-off variable
   ledBrightness stripBrightness = 2;  // The main brightness of the strip
-  direction stripDirection = HALF_DOWN;  // The direction for the movments
+  direction stripDirection = FULL_NORM;  // The direction for the movments
 
 // ------ END: GLOBAL VARIABLES ------
 
@@ -159,6 +159,7 @@
   int directionCounter = 0;
   int randomDirectionRange = 300;
   int randomDirection = (rand() % randomDirectionRange) - randomDirectionRange/2;
+
   void changeDirection () {
 
     if (directionCounter == directionCounterRange/4 + randomDirection) {
@@ -182,54 +183,26 @@
     directionCounter++;
   }
 
-  int mvt_5_deplacement [3][5] = {
-    {0, NUMPIXELS*1/5, NUMPIXELS*2/5, NUMPIXELS*3/5, NUMPIXELS*4/5},
-    {0, NUMPIXELS/2*1/5, NUMPIXELS/2*2/5, NUMPIXELS/2*3/5, NUMPIXELS/2*4/5},
-    {0 + HM_g, NUMPIXELS/2*1/5 + HM_g, NUMPIXELS/2*2/5 + HM_g, NUMPIXELS/2*3/5 + HM_g, NUMPIXELS/2*4/5 + HM_g}
-    };
-  /*int mvt_5_half_deplacement [2][5] = {
-    {0, NUMPIXELS*1/5, NUMPIXELS*2/5, NUMPIXELS*3/5, NUMPIXELS*4/5},
-    {0, NUMPIXELS*1/5, NUMPIXELS*2/5, NUMPIXELS*3/5, NUMPIXELS*4/5}
-    };*/
+  int mvt_5_full_deplacement [5] = {0, NUMPIXELS*1/5, NUMPIXELS*2/5, NUMPIXELS*3/5, NUMPIXELS*4/5};
+  int mvt_5_half_deplacement [5] = {0, NUMPIXELS/2*1/5, NUMPIXELS/2*2/5, NUMPIXELS/2*3/5, NUMPIXELS/2*4/5};
+
   void mvt_5 (mainColor color1, mainColor color2, direction dir) {
 
     byte dash_radius = 3;
 
     bool isColored;  // Decides if the LED will get color 2
-    int i; // Main for loop counter
-    bool isNorm = (dir == FULL_NORM ||dir == HALF_UP);  // For the direction
+    bool isNormOrUp = (dir == FULL_NORM ||dir == HALF_UP);  // For the direction
     bool isHalf = (dir == HALF_UP || dir == HALF_DOWN);
-    bool isHalfNumber;
-    int led_begin, led_end;  // begin and end of the part of the strip we're looking at
+    
+    // FULL
+    if (!isHalf) {
 
-    for (
-      int k=0;
-      (isHalf) ? k < 2 : k < 1;
-      k++
-    ) {
-
-      if (isHalf) {
-        if (k == 0) {
-          led_begin = 0;
-          led_end = HM_d;
-          isHalfNumber = 1;
-        }
-        else {
-          led_begin = HM_g;
-          led_end = NUMPIXELS-1;
-          isHalfNumber = 2;
-        }
-      }
-      else {
-        led_begin = 0;
-        led_end = NUMPIXELS-1;
-        isHalfNumber = 0;
-      }
+      int i; // Main for loop counter
 
       for (
-        (isNorm) ? i=led_begin : i=led_end;
-        (isNorm) ? i<=led_end : i>=led_begin;
-        (isNorm) ? i++ : i--)
+        (isNormOrUp) ? i=0 : i=NUMPIXELS-1;
+        (isNormOrUp) ? i<NUMPIXELS : i>=0;
+        (isNormOrUp) ? i++ : i--)
         {
 
         isColored = false;
@@ -237,9 +210,9 @@
 
           // Global checking
           if (
-            (i >= (mvt_5_deplacement[isHalfNumber][j]-dash_radius) && i <= (mvt_5_deplacement[isHalfNumber][j]+dash_radius)) // "normal" case
-            || (i >= led_begin && i < led_begin + dash_radius && mvt_5_deplacement[isHalfNumber][j] >= led_end +1 - dash_radius + i) // start of strip case
-            || (i >= led_end +1 - dash_radius && mvt_5_deplacement[isHalfNumber][j] < led_begin + dash_radius - (led_end+1-i))  // end of strip case
+            (i >= (mvt_5_full_deplacement[j]-dash_radius) && i <= (mvt_5_full_deplacement[j]+dash_radius)) // "normal" case
+            || (i < dash_radius && mvt_5_full_deplacement[j] >= NUMPIXELS - dash_radius + i) // start of strip case
+            || (i >= NUMPIXELS - dash_radius && mvt_5_full_deplacement[j] < dash_radius - (NUMPIXELS-i))  // end of strip case
             ) {
 
             isColored = true;
@@ -254,20 +227,57 @@
         }
       }
 
-      //Serial.println(deplacement[0]);
-
       for (int i=0; i<5; i++) {
 
-        if ((isNorm && mvt_5_deplacement[isHalfNumber][i] != led_end) || (!isNorm && mvt_5_deplacement[isHalfNumber][i] != led_begin)) {
-          (isNorm) ? mvt_5_deplacement[isHalfNumber][i]++ : mvt_5_deplacement[isHalfNumber][i]--;
+        if ((isNormOrUp && mvt_5_full_deplacement[i] != NUMPIXELS-1) || (!isNormOrUp && mvt_5_full_deplacement[i] != 0)) {
+          (isNormOrUp) ? mvt_5_full_deplacement[i]++ : mvt_5_full_deplacement[i]--;
         }
         else {
-          (isNorm) ? mvt_5_deplacement[isHalfNumber][i] = led_begin : mvt_5_deplacement[isHalfNumber][i] = led_end;
+          (isNormOrUp) ? mvt_5_full_deplacement[i] = 0 : mvt_5_full_deplacement[i] = NUMPIXELS-1;
         }
       }
-    }
 
-  //Serial.println(deplacement[0]);
+    } // HALF
+    else {
+
+      /*int led_begin, led_end;  // begin and end of the part of the strip we're looking at
+      int i;
+
+      for (int k=0; k<2; k++) {
+
+        int mvt_5_half_transposed
+
+        if (k==0) {
+          (isNormOrUp) ? i = 0 : i = NUMPIXELS/2 -1;
+        }
+        else {
+          (isNormOrUp) ? i = NUMPIXELS-1 : i = NUMPIXELS/2;
+        }
+
+        for (
+          i;
+          i<NUMPIXELS/2;
+          ((k==0 && isNormOrUp) || (k==1 && !isNormOrUp)) ? i++ : i--
+        ) {
+
+          isColored = false;
+          for (int j=0; j<5; j++) {
+            if (
+              (k == 0 && 
+                (i >= (mvt_5_half_deplacement[j]-dash_radius) && i <= (mvt_5_half_deplacement[j]+dash_radius))
+              )
+              ||
+              (k == 1 && 
+                (i >= (mvt_5_half_deplacement[j]-dash_radius) && i <= (mvt_5_half_deplacement[j]+dash_radius))
+              )
+            ) {
+
+              isColored = true;
+            }
+          }
+        }
+      }*/
+    }
   }
 
 // ------ END: STRIP FUNTIONS ------
@@ -294,7 +304,7 @@ void loop() {
     Serial.println("Btn off");
   }*/
 
-  changeDirection ();
+  //changeDirection ();
   mvt_5 (RED, BLUE, stripDirection);
 
   pixels.show();
