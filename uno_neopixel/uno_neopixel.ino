@@ -69,7 +69,7 @@
 
   bool isOn = true;  // LED strip global on-off variable
   ledBrightness stripBrightness = 2;  // The main brightness of the strip
-  direction stripDirection = FULL_NORM;  // The direction for the movments
+  direction stripDirection = HALF_UP;  // The direction for the movments
 
 // ------ END: GLOBAL VARIABLES ------
 
@@ -197,13 +197,7 @@
     // FULL
     if (!isHalf) {
 
-      int i; // Main for loop counter
-
-      for (
-        (isNormOrUp) ? i=0 : i=NUMPIXELS-1;
-        (isNormOrUp) ? i<NUMPIXELS : i>=0;
-        (isNormOrUp) ? i++ : i--)
-        {
+      for (int i=0; i<NUMPIXELS; i++) {
 
         isColored = false;
         for (int j=0; j<5; j++) {
@@ -240,29 +234,26 @@
     } // HALF
     else {
 
-      /*int led_begin, led_end;  // begin and end of the part of the strip we're looking at
+      int led_begin, led_end;  // begin and end of the part of the strip we're looking at
       int i;
 
       for (int k=0; k<2; k++) {
 
-        int mvt_5_half_transposed
+        int mvt_5_half_transposed[5];
 
-        if (k==0) {
-          (isNormOrUp) ? i = 0 : i = NUMPIXELS/2 -1;
-        }
-        else {
-          (isNormOrUp) ? i = NUMPIXELS-1 : i = NUMPIXELS/2;
+        for (int m=0; m<5; m++) {
+          mvt_5_half_transposed[m] = NUMPIXELS -1 - mvt_5_half_deplacement[m];
         }
 
         for (
-          i;
-          i<NUMPIXELS/2;
-          ((k==0 && isNormOrUp) || (k==1 && !isNormOrUp)) ? i++ : i--
+          (k==0) ? i=0 : i=NUMPIXELS/2;
+          (k==0) ? i<NUMPIXELS/2 : i<NUMPIXELS;
+          i++
         ) {
 
           isColored = false;
           for (int j=0; j<5; j++) {
-            if (
+            /*if (
               (k == 0 && 
                 (i >= (mvt_5_half_deplacement[j]-dash_radius) && i <= (mvt_5_half_deplacement[j]+dash_radius))
               )
@@ -270,13 +261,44 @@
               (k == 1 && 
                 (i >= (mvt_5_half_deplacement[j]-dash_radius) && i <= (mvt_5_half_deplacement[j]+dash_radius))
               )
+            ) {*/
+
+            if (
+              (i >= (mvt_5_half_deplacement[j]-dash_radius) && i <= (mvt_5_half_deplacement[j]+dash_radius))
+              ||
+              (i >= (mvt_5_half_transposed[j]-dash_radius) && i <= (mvt_5_half_transposed[j]+dash_radius))
+              ||
+              (k == 0 && i < dash_radius && mvt_5_half_deplacement[j] >= NUMPIXELS/2 - dash_radius + i) // start of strip case
+              ||
+              (k == 1 && i >= NUMPIXELS/2 && i < NUMPIXELS/2 + dash_radius && mvt_5_half_transposed[j] >= NUMPIXELS - dash_radius + i) // start of strip case
+              ||
+              (k == 0 && i >= NUMPIXELS/2 - dash_radius && mvt_5_half_deplacement[j] < dash_radius - (NUMPIXELS/2-i))  // end of strip case
+              ||
+              (k == 1 && i >= NUMPIXELS - dash_radius && mvt_5_half_deplacement[j] >= NUMPIXELS/2 && mvt_5_half_deplacement[j] < NUMPIXELS/2 + dash_radius - (NUMPIXELS/2-i))  // end of strip case
             ) {
 
               isColored = true;
             }
           }
+
+          if (isColored) {
+            setLed(i, color2, 0);
+          }
+          else {
+            setLed(i, color1, 0);
+          }
         }
-      }*/
+      }
+
+      for (int i=0; i<5; i++) {
+
+        if ((isNormOrUp && mvt_5_half_deplacement[i] != NUMPIXELS/2-1) || (!isNormOrUp && mvt_5_half_deplacement[i] != 0)) {
+          (isNormOrUp) ? mvt_5_half_deplacement[i]++ : mvt_5_half_deplacement[i]--;
+        }
+        else {
+          (isNormOrUp) ? mvt_5_half_deplacement[i] = 0 : mvt_5_half_deplacement[i] = NUMPIXELS/2-1;
+        }
+      }
     }
   }
 
@@ -298,15 +320,30 @@ void loop() {
   Serial.println(stripBrightness);*/
 
   /*if (digitalRead(BTN_PIN) == HIGH) {
-    Serial.println("Btn on");
+    switch (stripDirection) {
+      case FULL_NORM:
+        stripDirection = FULL_REV;
+        break;
+      case FULL_REV:
+        stripDirection = HALF_DOWN;
+        break;
+      case HALF_DOWN:
+        stripDirection = HALF_UP;
+        break;
+      default:
+        stripDirection = FULL_NORM;
+    }
+    delay(200);
+    //Serial.println("Btn on");
   }
   else {
-    Serial.println("Btn off");
+    //Serial.println("Btn off");
   }*/
 
-  //changeDirection ();
+  changeDirection ();
   mvt_5 (RED, BLUE, stripDirection);
 
   pixels.show();
   delay(50);
+  //delay(1000);
 }
