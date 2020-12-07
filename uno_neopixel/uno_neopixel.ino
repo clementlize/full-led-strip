@@ -21,7 +21,7 @@
 // ------ SENSORS ------
 
   #define KNOB_PIN 0
-  #define BTN_PIN 8
+  #define BTN_PIN 10
 
 // ------ END: SENSORS ------
 
@@ -52,9 +52,16 @@
   typedef byte ledBrightness;  // Brightness value. Can be 1, 2, 3 or 4
   typedef byte colorOffset;  // Offset value. Must be between -3 and 3.
 
-  // The colors available for the LED strip.
+  /** The colors available for the LED strip.
+   * Color palette from https://flatuicolors.com/palette/defo
+   * Converted to HSV from https://www.peko-step.com/fr/tool/hsvrgb.html
+   * Converted to Adafruit Neopixel HSV from https://learn.adafruit.com/adafruit-neopixel-uberguide/arduino-library-use
+   */
   typedef enum {
-    RED, GREEN, BLUE
+    RED, GREEN, BLUE,
+    TURQUOISE, EMERALD, PETER_RIVER, AMETHYST, WET_ASPHALT,
+    SUN_FLOWER, CARROT, ALIZARIN, CLOUDS, CONCRETE,
+    COLORS_COUNT
   } mainColor;
 
   // The directions available for the movments
@@ -68,22 +75,30 @@
 // ------ GLOBAL VARIABLES ------
 
   bool isOn = true;  // LED strip global on-off variable
+
   ledBrightness stripBrightness = 2;  // The main brightness of the strip
-  direction stripDirection = HALF_UP;  // The direction for the movments
+  byte stripBrightnessOffset = 0;
+
+  direction stripDirection = FULL_NORM;  // The direction for the movments
+
+  int stripDelay = 60;
+  
+  mainColor stripColor1 = ALIZARIN;
+  mainColor stripColor2 = TURQUOISE;
 
 // ------ END: GLOBAL VARIABLES ------
 
 
 // ------ COLOR CONTROL FUNTIONS ------
 
-  void knobChangeBrightness (int value) {
+  /*void knobChangeBrightness (int value) {
 
     if (value >= 0 && value < 138) { stripBrightness = 1; }
     else if (value >= 138 && value < 276) { stripBrightness = 2; }
     else if (value >= 276 && value < 414) { stripBrightness = 3; }
     else if (value >= 414 && value < 552) { stripBrightness = 4; }
     else { stripBrightness = 5; }
-  }
+  }*/
 
   /** Returns the value to put in the setHsvColor function, depending on the global brightness value.
    * @param brightness the 
@@ -123,20 +138,62 @@
 
     if (isOn) {
 
+      byte hsvBrightness = getHsvBrightness(stripBrightness) + stripBrightnessOffset;
+
       // Setting basic color with its offset
       switch (color) {
 
         case RED:
-          hsv = pixels.ColorHSV(0, 255, getHsvBrightness(stripBrightness));
+          hsv = pixels.ColorHSV(0, 255, hsvBrightness);
           break;
 
         case GREEN:
-          hsv = pixels.ColorHSV(21845, 255, getHsvBrightness(stripBrightness));
+          hsv = pixels.ColorHSV(21845, 255, hsvBrightness);
           break;
 
-        case BLUE:   
+        case TURQUOISE:
+          hsv = pixels.ColorHSV(30583, 219, hsvBrightness);
+          break;
+
+        case EMERALD:
+          hsv = pixels.ColorHSV(26396, 197, hsvBrightness);
+          break;
+
+        case PETER_RIVER:
+          hsv = pixels.ColorHSV(37137, 194, hsvBrightness);
+          break;
+
+        case AMETHYST:
+          hsv = pixels.ColorHSV(51336, 130, hsvBrightness);
+          break;
+
+        case WET_ASPHALT:
+          hsv = pixels.ColorHSV(38229, 113, hsvBrightness);
+          break;
+
+        case SUN_FLOWER:
+          hsv = pixels.ColorHSV(8738, 239, hsvBrightness);
+          break;
+
+        case CARROT:
+          hsv = pixels.ColorHSV(5097, 217, hsvBrightness);
+          break;
+
+        case ALIZARIN:
+          hsv = pixels.ColorHSV(910, 188, hsvBrightness);
+          break;
+
+        case CLOUDS:
+          hsv = pixels.ColorHSV(34952, 5, hsvBrightness);
+          break;
+
+        case CONCRETE:
+          hsv = pixels.ColorHSV(33314, 26, hsvBrightness);
+          break;
+
+        case BLUE:
         default:
-          hsv = pixels.ColorHSV(43690, 255, getHsvBrightness(stripBrightness));
+          hsv = pixels.ColorHSV(43690, 255, hsvBrightness);
           break;
       }
 
@@ -183,8 +240,67 @@
     directionCounter++;
   }
 
-  int mvt_5_full_deplacement [5] = {0, NUMPIXELS*1/5, NUMPIXELS*2/5, NUMPIXELS*3/5, NUMPIXELS*4/5};
-  int mvt_5_half_deplacement [5] = {0, NUMPIXELS/2*1/5, NUMPIXELS/2*2/5, NUMPIXELS/2*3/5, NUMPIXELS/2*4/5};
+  bool isReactingTriggered = false;
+  bool isReacting = false;
+  byte regenerating = 31;
+  byte reactingCycle = 5;
+
+  void musicReact() {
+
+    if (isReactingTriggered) {
+      isReacting = true;
+      isReactingTriggered = false;
+    }
+
+    if (isReacting) {
+
+      switch (reactingCycle) {
+
+        case 5:
+          stripDelay = 0;
+          stripBrightnessOffset = 10;
+          reactingCycle--;
+          break;
+
+        case 4:
+          stripDelay = 5;
+          reactingCycle--;
+          break;
+
+        case 3:
+          stripDelay = 10;
+          reactingCycle--;
+          break;
+
+        case 2:
+          stripDelay = 20;
+          stripBrightnessOffset = 5;
+          reactingCycle--;
+          break;
+
+        case 1:
+          stripDelay = 40;
+          stripBrightnessOffset = 2;
+          reactingCycle--;
+          break;
+
+        default:
+          stripDelay = 60;
+          reactingCycle = 5;
+          stripBrightnessOffset = 0;
+          isReacting = false;
+          regenerating = 30;
+      }
+    }
+  }
+
+// ------ END: STRIP FUNTIONS ------
+
+
+// ------ STRIP MOVMENTS ------
+
+  int mvt_5_full_deplacement [8] = {0, NUMPIXELS*1/8, NUMPIXELS*2/8, NUMPIXELS*3/8, NUMPIXELS*4/8, NUMPIXELS*5/8, NUMPIXELS*6/8, NUMPIXELS*7/8};
+  int mvt_5_half_deplacement [5] = {0, NUMPIXELS/2*1/5, NUMPIXELS/2*2/5, NUMPIXELS/2*3/5, NUMPIXELS/2*4/5}; 
 
   void mvt_5 (mainColor color1, mainColor color2, direction dir) {
 
@@ -200,7 +316,7 @@
       for (int i=0; i<NUMPIXELS; i++) {
 
         isColored = false;
-        for (int j=0; j<5; j++) {
+        for (int j=0; j<8; j++) {
 
           // Global checking
           if (
@@ -221,7 +337,7 @@
         }
       }
 
-      for (int i=0; i<5; i++) {
+      for (int i=0; i<8; i++) {
 
         if ((isNormOrUp && mvt_5_full_deplacement[i] != NUMPIXELS-1) || (!isNormOrUp && mvt_5_full_deplacement[i] != 0)) {
           (isNormOrUp) ? mvt_5_full_deplacement[i]++ : mvt_5_full_deplacement[i]--;
@@ -253,29 +369,20 @@
 
           isColored = false;
           for (int j=0; j<5; j++) {
-            /*if (
-              (k == 0 && 
-                (i >= (mvt_5_half_deplacement[j]-dash_radius) && i <= (mvt_5_half_deplacement[j]+dash_radius))
-              )
-              ||
-              (k == 1 && 
-                (i >= (mvt_5_half_deplacement[j]-dash_radius) && i <= (mvt_5_half_deplacement[j]+dash_radius))
-              )
-            ) {*/
 
             if (
-              (i >= (mvt_5_half_deplacement[j]-dash_radius) && i <= (mvt_5_half_deplacement[j]+dash_radius))
+              (i >= (mvt_5_half_deplacement[j]-dash_radius) && i <= (mvt_5_half_deplacement[j]+dash_radius) && i <= NUMPIXELS/2 -1)
               ||
-              (i >= (mvt_5_half_transposed[j]-dash_radius) && i <= (mvt_5_half_transposed[j]+dash_radius))
+              (k == 0 && i <= NUMPIXELS/2 -1 && i >= NUMPIXELS/2 - dash_radius + mvt_5_half_deplacement[j])
               ||
-              (k == 0 && i < dash_radius && mvt_5_half_deplacement[j] >= NUMPIXELS/2 - dash_radius + i) // start of strip case
+              (k == 0 && i <= dash_radius - (NUMPIXELS/2 - mvt_5_half_deplacement[j]))
               ||
-              (k == 1 && i >= NUMPIXELS/2 && i < NUMPIXELS/2 + dash_radius && mvt_5_half_transposed[j] >= NUMPIXELS - dash_radius + i) // start of strip case
+              (i >= (mvt_5_half_transposed[j]-dash_radius) && i <= (mvt_5_half_transposed[j]+dash_radius) && i >= NUMPIXELS/2)
               ||
-              (k == 0 && i >= NUMPIXELS/2 - dash_radius && mvt_5_half_deplacement[j] < dash_radius - (NUMPIXELS/2-i))  // end of strip case
+              (k == 1 && i >= NUMPIXELS/2 && i <= NUMPIXELS/2 + dash_radius -1 - (NUMPIXELS - mvt_5_half_transposed[j] -1))
               ||
-              (k == 1 && i >= NUMPIXELS - dash_radius && mvt_5_half_deplacement[j] >= NUMPIXELS/2 && mvt_5_half_deplacement[j] < NUMPIXELS/2 + dash_radius - (NUMPIXELS/2-i))  // end of strip case
-            ) {
+              (k == 1 && i >= NUMPIXELS - (NUMPIXELS/2 + dash_radius - mvt_5_half_transposed[j]))
+              ) {
 
               isColored = true;
             }
@@ -302,13 +409,13 @@
     }
   }
 
-// ------ END: STRIP FUNTIONS ------
+// ------ END: STRIP MOVMENTS ------
 
 void setup() {
 
   //Serial.begin(9600);
   pixels.begin(); // This initializes the NeoPixel library.
-  //pinMode(BTN_PIN, INPUT);
+  pinMode(BTN_PIN, INPUT);
 
 }
 
@@ -340,10 +447,19 @@ void loop() {
     //Serial.println("Btn off");
   }*/
 
+  if (reactingCycle == 5 && digitalRead(BTN_PIN) == HIGH) {
+
+    isReactingTriggered = true;
+    //stripColor1 = (mainColor)(rand() % COLORS_COUNT);
+    //stripColor2 = (mainColor)(rand() % COLORS_COUNT);
+  }
+
+  musicReact();
+
   changeDirection ();
-  mvt_5 (RED, BLUE, stripDirection);
+  mvt_5 (stripColor1, stripColor2, stripDirection);
 
   pixels.show();
-  delay(50);
+  delay(stripDelay);
   //delay(1000);
 }
